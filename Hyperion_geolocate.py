@@ -40,13 +40,13 @@
 
 # # Parse command line
 
-# In[297]:
+# In[1]:
 
 
 import argparse
 
 
-# In[298]:
+# In[2]:
 
 
 long_description = """    Pull in Hyperion L1R file and hyperion_metadata.csv to calculate the geolocation
@@ -54,7 +54,7 @@ long_description = """    Pull in Hyperion L1R file and hyperion_metadata.csv to
         if selected creates new file with just the geolocation data, if not saves again the radiance data"""
 
 
-# In[319]:
+# In[8]:
 
 
 parser = argparse.ArgumentParser(description=long_description)
@@ -62,24 +62,32 @@ parser.add_argument('-f','--file_name',nargs='?',
                     help='Input filename',
                     default='EO1H0080122015195110K4.L1R')
 parser.add_argument('-r','--root_dir',nargs='?',
-                    help='full file path of the root directory to save to',
+                    help='full file path of the root directory to read from',
                     default='/data/sam/SBG/data/')
-parser.add_argument('-o','--only_geo',help='if set, will only save the geolocation information to new file',
+parser.add_argument('-m','--hyperionmeta_dir',nargs='?',
+                    help='full file path of the directory which has the hyperion metadata file',
+                    default='/data/sam/SBG/data/')
+parser.add_argument('-o','--out_dir',nargs='?',
+                    help='full file path of the output directory',
+                    default='/data/sam/SBG/data/')
+parser.add_argument('-g','--only_geo',help='if set, will only save the geolocation information to new file',
                     action='store_true')
 parser.add_argument('-q','--quiet',help='if set, quiet the comments',
                     action='store_true')
 
 
-# In[320]:
+# In[9]:
 
 
 in_ = vars(parser.parse_known_args()[0])
 
 
-# In[321]:
+# In[10]:
 
 
 fp = in_.get('root_dir','/data/sam/SBG/data/')
+fph = in_.get('hyperionmeta_dir','/data/sam/SBG/data/')
+fp_out = in_.get('out_dir','/data/sam/SBG/data/')
 only_geo = in_.get('only_geo',False)
 fname = in_.get('file_name','EO1H0080122015195110K4.L1R')
 verbose = not in_.get('quiet',False)
@@ -124,7 +132,7 @@ ny,nx = da.dims['Along Track'],da.dims['Cross Track']
 
 
 g = pd.read_csv(fp+'Hyperion_attributes.csv')
-if verbose: print('loaded metadata file: '+fp+'Hyperion_attributes.csv')
+if verbose: print('loaded metadata file: '+fph+'Hyperion_attributes.csv')
 
 
 # In[45]:
@@ -322,11 +330,11 @@ da['SolarAzimuthAngle'] = xr.DataArray(azi,dims=['Along Track','Cross Track'],at
 
 if only_geo:
     du = da.drop(['Image','Spectral Center Wavelengths','Spectral Bandwidths','Gain Coefficients','Flag Mask'])
-    new_path = fp+fname.split('.')[0]+'_'+fname.split('.')[1]+'_geo_only.nc'
+    new_path = fp_out+fname.split('.')[0]+'_'+fname.split('.')[1]+'_geo_only.nc'
     print('Saving to : '+new_path)
     du.to_netcdf(new_path)
 else:
-    new_path = fp+fname.split('.')[0]+'_'+fname.split('.')[1]+'_geo.nc'
+    new_path = fp_out+fname.split('.')[0]+'_'+fname.split('.')[1]+'_geo.nc'
     print('Saving to : '+new_path)
     da.to_netcdf(new_path)
 
