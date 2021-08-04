@@ -2,35 +2,100 @@
 # coding: utf-8
 
 # # Info
-# Purpose:
-# 
-#     Read in L1 hyperion files. Geolocate with .csv file, output new file
+# Purpose:  
+#     - Read in L1 hyperion files. Geolocate with .csv file, output new file
 # 
 # Input:
+#  - -f: input file name
+#  - -r: root directory
+#  - -m: metadata file directory location
+#  - -o: output file directory
+#  - -g: for setting to only save geolocation information
+#  - -q: quiet (non-verbose) setting
 # 
-#     arguments
-# 
-# Output:
-# 
-#     Figure and save files
-# 
-# Keywords:
-# 
-#     none
+# Output:  
+#     - Save file
 # 
 # Dependencies:
-# 
-#     - load_utils.py
-#     - matplotlib
-#     - numpy
-#     - write_utils
-#     - path_utils
-#     - hdf5storage
-#     - scipy
+#  - numpy
+#  - argparse
+#  - pandas
+#  - xarray
+#  - pyproj
+#  - datetime
+#  - pyephem
 # 
 # Needed Files:
-#   - file.rc : for consistent creation of look of matplotlib figures
-#   - ...
+#   - input file
+#   - Hyperion_attributes.csv
+#   
+# Example:
+# 
+#     $ python Hyperion_geolocate.py -g -r /nobackupp10/hyperion/L1/ -o /nobackupp10/hyperion/L1_geo/ -m /nobackupp10/hyperion/
+#  
+#     loaded file: /nobackupp10/hyperion/L1/EO1H0080122015195110K4.L1R
+#     loaded metadata file: /nobackupp10/hyperion/Hyperion_attributes.csv
+#     .. interpolating corners for lat & lon
+#     .. calculating view angles
+#     .. calculating sun angles
+#     Saving to : /nobackupp10/hyperion/L1_geo/EO1H0080122015195110K4_L1R_geo_only.nc  
+# 
+#     $ ncdump -h /nobackupp10/hyperion/L1_geo/EO1H0080122015195110K4_L1R_geo_only.nc  
+#  
+#     netcdf EO1H0080122015195110K4_L1R_geo_only {
+#     dimensions:
+#             Along\ Track = 3407 ;
+#             Cross\ Track = 256 ;
+#     variables:
+#             double Latitude(Along\ Track, Cross\ Track) ;
+#                     Latitude:_FillValue = NaN ;
+#                     Latitude:Geolocation_CreatedBy = "Samuel LeBlanc" ;
+#                     Latitude:Geolocation_CreationDate = "2021-08-03 17:18:06.169785" ;
+#                     Latitude:FieldInfo = "see: https://lta.cr.usgs.gov/DD/EO1.html" ;
+#                     Latitude:Geolocation_version = "1.0" ;
+#                     Latitude:Geolocation_method = "Great circle interplation between corners from file: Hyperion_attributes.csv, cross-track first, then along track, using pyproj, WSG84" ;
+#             double Longitude(Along\ Track, Cross\ Track) ;
+#                     Longitude:_FillValue = NaN ;
+#                     Longitude:Geolocation_CreatedBy = "Samuel LeBlanc" ;
+#                     Longitude:Geolocation_CreationDate = "2021-08-03 17:18:06.169785" ;
+#                     Longitude:FieldInfo = "see: https://lta.cr.usgs.gov/DD/EO1.html" ;
+#                     Longitude:Geolocation_version = "1.0" ;
+#                     Longitude:Geolocation_method = "Great circle interplation between corners from file: Hyperion_attributes.csv, cross-track first, then along track, using pyproj, WSG84" ;
+#             double time(Along\ Track) ;
+#                     time:_FillValue = NaN ;
+#                     time:Geolocation_CreatedBy = "Samuel LeBlanc" ;
+#                     time:Geolocation_CreationDate = "2021-08-03 17:18:06.188279" ;
+#                     time:Geolocation_version = "1.0" ;
+#                     time:time_method = "from Scene_start and Scene_stop from file Hyperion_attributes.csv" ;
+#                     time:units = "seconds since 2015-07-14 13:27:25.295000" ;
+#                     time:calendar = "proleptic_gregorian" ;
+#             double ViewZenithAngle(Along\ Track, Cross\ Track) ;
+#                     ViewZenithAngle:_FillValue = NaN ;
+#                     ViewZenithAngle:Geolocation_CreatedBy = "Samuel LeBlanc" ;
+#                     ViewZenithAngle:Geolocation_CreationDate = "2021-08-03 17:18:09.975463" ;
+#                     ViewZenithAngle:Geolocation_version = "1.0" ;
+#                     ViewZenithAngle:ViewAngle_method = "using pyproj to calculate differences in look angle from center of crosstrack to each pixel. View azimuth angle calculated from normal of along track" ;
+#                     ViewZenithAngle:Additional_info = "see https://www.usgs.gov/centers/eros/look-angles-and-coverage-area" ;
+#             double ViewAzimuthAngle(Along\ Track, Cross\ Track) ;
+#                     ViewAzimuthAngle:_FillValue = NaN ;
+#                     ViewAzimuthAngle:Geolocation_CreatedBy = "Samuel LeBlanc" ;
+#                     ViewAzimuthAngle:Geolocation_CreationDate = "2021-08-03 17:18:09.975463" ;
+#                     ViewAzimuthAngle:Geolocation_version = "1.0" ;
+#                     ViewAzimuthAngle:ViewAngle_method = "using pyproj to calculate differences in look angle from center of crosstrack to each pixel. View azimuth angle calculated from normal of along track" ;
+#                     ViewAzimuthAngle:Additional_info = "see https://www.usgs.gov/centers/eros/look-angles-and-coverage-area" ;
+#             double SolarZenithAngle(Along\ Track, Cross\ Track) ;
+#                     SolarZenithAngle:_FillValue = NaN ;
+#                     SolarZenithAngle:Geolocation_CreatedBy = "Samuel LeBlanc" ;
+#                     SolarZenithAngle:Geolocation_CreationDate = "2021-08-03 17:18:59.944900" ;
+#                     SolarZenithAngle:Geolocation_version = "1.0" ;
+#                     SolarZenithAngle:SolarAngle_method = "using pyephem to calculate solar zenith and azimuth angle from interpolated lat-lon and time positions" ;
+#             double SolarAzimuthAngle(Along\ Track, Cross\ Track) ;
+#                     SolarAzimuthAngle:_FillValue = NaN ;
+#                     SolarAzimuthAngle:Geolocation_CreatedBy = "Samuel LeBlanc" ;
+#                     SolarAzimuthAngle:Geolocation_CreationDate = "2021-08-03 17:18:59.944900" ;
+#                     SolarAzimuthAngle:Geolocation_version = "1.0" ;
+#                     SolarAzimuthAngle:SolarAngle_method = "using pyephem to calculate solar zenith and azimuth angle from interpolated lat-lon and time positions" ;
+# 
 # 
 # Modification History:
 # 
