@@ -105,13 +105,13 @@
 
 # # Parse command line
 
-# In[1]:
+# In[ ]:
 
 
 import argparse
 
 
-# In[2]:
+# In[ ]:
 
 
 long_description = """    Pull in Hyperion L1R file and hyperion_metadata.csv to calculate the geolocation
@@ -119,7 +119,7 @@ long_description = """    Pull in Hyperion L1R file and hyperion_metadata.csv to
         if selected creates new file with just the geolocation data, if not saves again the radiance data"""
 
 
-# In[8]:
+# In[ ]:
 
 
 parser = argparse.ArgumentParser(description=long_description)
@@ -141,13 +141,13 @@ parser.add_argument('-q','--quiet',help='if set, quiet the comments',
                     action='store_true')
 
 
-# In[9]:
+# In[ ]:
 
 
 in_ = vars(parser.parse_known_args()[0])
 
 
-# In[10]:
+# In[ ]:
 
 
 fp = in_.get('root_dir','/data/sam/SBG/data/')
@@ -160,7 +160,7 @@ verbose = not in_.get('quiet',False)
 
 # # Prepare python environment
 
-# In[94]:
+# In[ ]:
 
 
 import numpy as np
@@ -170,7 +170,7 @@ import pyproj as pp
 from datetime import datetime
 
 
-# In[307]:
+# In[ ]:
 
 
 vv = '1.0'
@@ -178,14 +178,14 @@ vv = '1.0'
 
 # # Load files
 
-# In[317]:
+# In[ ]:
 
 
 da = xr.open_dataset(fp+fname)
 if verbose: print('loaded file: '+fp+fname)
 
 
-# In[123]:
+# In[ ]:
 
 
 ny,nx = da.dims['Along Track'],da.dims['Cross Track']
@@ -200,7 +200,7 @@ g = pd.read_csv(fp+'Hyperion_attributes.csv')
 if verbose: print('loaded metadata file: '+fph+'Hyperion_attributes.csv')
 
 
-# In[45]:
+# In[ ]:
 
 
 i = g[g['Entity_ID'].str.contains(fname.split('.')[0])]
@@ -208,7 +208,7 @@ i = g[g['Entity_ID'].str.contains(fname.split('.')[0])]
 
 # # Interpolate the corners
 
-# In[115]:
+# In[ ]:
 
 
 geoid = pp.Geod(ellps="WGS84")
@@ -216,7 +216,7 @@ x_trackpoints_top = geoid.npts(i['NW_Corne_3'],i['NW_Corne_2'],i['NE_Corne_3'],i
 x_trackpoints_bottom = geoid.npts(i['SW_Corne_3'],i['SW_Corne_2'],i['SE_Corne_3'],i['SE_Corne_2'],nx)
 
 
-# In[116]:
+# In[ ]:
 
 
 if verbose: print('.. interpolating corners for lat & lon')
@@ -228,7 +228,7 @@ for j,xt in enumerate(x_trackpoints_top):
     lon[:,j] = tmp[:,0]
 
 
-# In[139]:
+# In[ ]:
 
 
 attributes = {'Geolocation_CreatedBy':'Samuel LeBlanc',
@@ -238,7 +238,7 @@ attributes = {'Geolocation_CreatedBy':'Samuel LeBlanc',
               'FieldInfo':'see: https://lta.cr.usgs.gov/DD/EO1.html'}
 
 
-# In[140]:
+# In[ ]:
 
 
 da['Latitude'] = xr.DataArray(lat,dims=['Along Track','Cross Track'],attrs=attributes)
@@ -247,7 +247,7 @@ da['Longitude'] = xr.DataArray(lon,dims=['Along Track','Cross Track'],attrs=attr
 
 # # Get the time of each along track line
 
-# In[243]:
+# In[ ]:
 
 
 start = pd.to_datetime(i['Scene_Star'],format='%Y:%j:%H:%M:%S.%f').values[0]
@@ -256,7 +256,7 @@ dt = np.linspace(start.astype(int),stop.astype(int),ny)
 time = [datetime.utcfromtimestamp(dti*1e-9) for dti in dt]
 
 
-# In[270]:
+# In[ ]:
 
 
 time_attrs = {'Geolocation_CreatedBy':'Samuel LeBlanc',
@@ -265,7 +265,7 @@ time_attrs = {'Geolocation_CreatedBy':'Samuel LeBlanc',
               'time_method':'from Scene_start and Scene_stop from file Hyperion_attributes.csv'}
 
 
-# In[271]:
+# In[ ]:
 
 
 da['time'] = xr.DataArray(time,dims=['Along Track'],attrs=time_attrs)
@@ -273,14 +273,14 @@ da['time'] = xr.DataArray(time,dims=['Along Track'],attrs=time_attrs)
 
 # # Get the view angles
 
-# In[193]:
+# In[ ]:
 
 
 distance_sat_to_earth = 705000.0 #m average, could be better by using the two line element orbit descriptor
 #vza = arctan(tan(look_angle)+dist_from_center/distance_sat_to_earth)
 
 
-# In[192]:
+# In[ ]:
 
 
 # get the distance from the center point
@@ -291,10 +291,10 @@ vaa = np.zeros((ny,nx)) #view azimuth angle
 for iy in range(ny):
     faa_tmp,baa_tmp,d_tmp = geoid.inv(lon[iy,ix*nx],lat[iy,ix*nx],lon[iy,:],lat[iy,:]) #forward az, back azi, dist in m    
     vza[iy,:] = np.rad2deg(np.arctan(np.tan(np.deg2rad(float(i['Look_Angle'])))+d_tmp/distance_sat_to_earth))
-    vaa[iy,:] = 90.0-faa_tmp
+    vaa[iy,:] = faa_tmp % 360.0
 
 
-# In[194]:
+# In[ ]:
 
 
 view_angles_attrs = {'Geolocation_CreatedBy':'Samuel LeBlanc',
@@ -304,7 +304,7 @@ view_angles_attrs = {'Geolocation_CreatedBy':'Samuel LeBlanc',
                      'Additional_info':'see https://www.usgs.gov/centers/eros/look-angles-and-coverage-area'}
 
 
-# In[196]:
+# In[ ]:
 
 
 da['ViewZenithAngle'] = xr.DataArray(vza,dims=['Along Track','Cross Track'],attrs=view_angles_attrs)
@@ -360,7 +360,7 @@ def get_sza_azi(lat,lon,datetimet,alt=None,return_sunearthfactor=False,return_su
         return sza,azi
 
 
-# In[286]:
+# In[ ]:
 
 
 if verbose: print('.. calculating sun angles')
@@ -372,7 +372,7 @@ for j in range(nx):
     azi[:,j] = np.array(azi_tmp)
 
 
-# In[289]:
+# In[ ]:
 
 
 sun_attrs = {'Geolocation_CreatedBy':'Samuel LeBlanc',
@@ -381,7 +381,7 @@ sun_attrs = {'Geolocation_CreatedBy':'Samuel LeBlanc',
              'SolarAngle_method':'using pyephem to calculate solar zenith and azimuth angle from interpolated lat-lon and time positions'}
 
 
-# In[290]:
+# In[ ]:
 
 
 da['SolarZenithAngle'] = xr.DataArray(sza,dims=['Along Track','Cross Track'],attrs=sun_attrs)
@@ -390,7 +390,7 @@ da['SolarAzimuthAngle'] = xr.DataArray(azi,dims=['Along Track','Cross Track'],at
 
 # # Save to file
 
-# In[296]:
+# In[ ]:
 
 
 if only_geo:
