@@ -196,7 +196,7 @@ ny,nx = da.dims['Along Track'],da.dims['Cross Track']
 # In[ ]:
 
 
-g = pd.read_csv(fp+'Hyperion_attributes.csv')
+g = pd.read_csv(fph+'Hyperion_attributes.csv')
 if verbose: print('loaded metadata file: '+fph+'Hyperion_attributes.csv')
 
 
